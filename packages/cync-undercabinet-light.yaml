@@ -1,0 +1,662 @@
+# Cync reveal HD+ undercabinet light on ESPHome: shared package
+#
+# Everything the light does lives here. Each light gets a small file of its
+# own (see examples/undercabinet-light.yaml) with its name, its API key and
+# Wi-Fi, which pulls this package in.
+#
+# Hardware: GE Cync reveal HD+ smart undercabinet light, models
+# CFIXUNCBR12CRVDMS / CFIXUNCBR18CRVDMS / CFIXUNCBR24CRVDMS (FCC ID
+# PUU-CFIXCNLRCRV). Its Wi-Fi/BLE module (U4, JXC8720-18, most likely a Realtek part) is
+# removed and a Seeed Studio XIAO ESP32-C6 is wired to its pads. The light's
+# own LED drivers stay:
+#   U5  SM15133EH  red, green, blue (one channel each)
+#   U3  SM15133EH  warm white (all three channels tied together)
+#   U6  SM15133EH  cool white (all three channels tied together)
+# Each driver channel sinks a fixed current set by its REXT resistor; the ESP
+# only switches it on and off with PWM on the DIM inputs (0.5-10 kHz).
+#
+# Wiring (XIAO pin / GPIO -> U4 pad -> what it reaches on the light):
+#   3V3            -> U4.1   3.3 V from the light's regulator
+#   GND            -> U4.2   ground
+#   D0  / GPIO0    -> U4.3   U5.4 DIM  red (154 ohm in series on its output)
+#   D1  / GPIO1    -> U4.4   U5.3 DIM  green
+#   D2  / GPIO2    -> U4.5   U5.2 DIM  blue
+#   D3  / GPIO21   -> U4.6   U3.2/3/4  warm white
+#   D4  / GPIO22   -> U4.7   U6.2/3/4  cool white
+#   D5  / GPIO23   -> U4.9   power button  (reads 0 V when pressed)
+#   D9  / GPIO20   -> U4.10  colour button (reads 0 V when pressed)
+#   U4.8 is not connected on the light. D6, D7, D8 and D10 stay unused.
+#
+# Button modes:
+#   Power button
+#     Tap          Toggle the light on or off.
+#     Double tap   75% brightness (turns the light on if it's off).
+#     Hold         Dim up or down, reversing direction each hold. Never below
+#                  5%; holding while off turns it on at 5% and brightens.
+#   Colour button
+#     Tap          Next preset: 3000 K, 2000 K, 4000 K, 5000 K, then red,
+#                  orange, yellow, pink, green, blue, teal, purple. 0.5 s fade.
+#     Double tap   Back to white at 3000 K.
+#     Hold 3 s     Quick dip of the lit colours to 10%, then a slow sweep
+#                  round the colour wheel. Let go to keep the colour showing.
+#   Both buttons
+#     Hold 5 s     Restart the ESP32, whatever the settings below.
+#
+#   Every tap, double tap and hold is also sent to Home Assistant as an event
+#   (Power Button, Color Button). With "Local Power Button Enabled" or "Local
+#   Color Button Enabled" off, that button only sends its events and Home
+#   Assistant decides what it does, unless Home Assistant isn't connected, in
+#   which case it acts locally as above. The 5 s restart always works.
+#
+# Standalone: the buttons, presets and dimming all run on the ESP itself, so
+# the light keeps working with Home Assistant or Wi-Fi down. Both reboot
+# timeouts are disabled so it doesn't restart itself every 15 minutes while
+# it waits; it reconnects on its own when the network comes back.
+#
+# Never plug USB into the XIAO while it is wired to the light's 3.3 V supply:
+# both regulators would drive the same rail. Flash on the bench, then use OTA.
+#
+# Requires ESPHome 2026.9.0 or newer (OTA encryption).
+
+substitutions:
+  # Pins, as wired above. Override in a light's own file if yours differ.
+  red_pin: GPIO0
+  green_pin: GPIO1
+  blue_pin: GPIO2
+  warm_white_pin: GPIO21
+  cool_white_pin: GPIO22
+  colour_button_pin: GPIO20
+  power_button_pin: GPIO23
+
+  # Colour button
+  preset_fade_ms: "500"        # fade between presets, in ms
+  colour_sweep_seconds: "12"   # one full trip round the colour wheel while held
+
+# rgbww_crossfade: ESPHome's rgbww light with a linear crossfade transition.
+# See components/rgbww_crossfade/rgbww_crossfade.h.
+external_components:
+  - source: github://RoussLabs/ESPHomeGeCyncESP32Modification@main
+    components: [rgbww_crossfade]
+    refresh: 1d
+
+esp32:
+  board: seeed_xiao_esp32c6
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+  level: DEBUG
+
+# The API key, OTA block and Wi-Fi credentials are in each light's own file.
+api:
+  reboot_timeout: 0s   # default 15min: reboots if HA isn't connected
+
+wifi:
+  reboot_timeout: 0s   # default 15min: reboots if Wi-Fi isn't connected
+  # No fallback hotspot or captive portal: an open hotspot on every light
+  # during a router outage would let anyone nearby enter new Wi-Fi details.
+
+# ---------------------------------------------------------------------------
+# PWM outputs
+#
+# frequency: on the C6 the LEDC timer gets 16-bit resolution (65,536 steps)
+# at 1220 Hz, 15-bit at 2441 Hz, 14-bit at 4882 Hz and 13-bit at 9765 Hz.
+# Use those exact values: 1221 Hz would already drop to 15 bits. 4882 Hz was
+# chosen after testing on the first light: no visible flicker, even with fast
+# movement. The "PWM Frequency" select below changes it at runtime.
+#
+# phase_angle spreads the switching edges so the channels don't all turn on
+# at the same instant on the 40 V supply.
+#
+# zero_means_zero keeps "off" fully off once a floor is set with the
+# "Minimum Brightness" number below.
+output:
+  - platform: ledc
+    id: out_red
+    pin: $red_pin
+    frequency: 4882Hz
+    phase_angle: 0
+    zero_means_zero: true
+  - platform: ledc
+    id: out_green
+    pin: $green_pin
+    frequency: 4882Hz
+    phase_angle: 120
+    zero_means_zero: true
+  - platform: ledc
+    id: out_blue
+    pin: $blue_pin
+    frequency: 4882Hz
+    phase_angle: 240
+    zero_means_zero: true
+  - platform: ledc
+    id: out_warm_white
+    pin: $warm_white_pin
+    frequency: 4882Hz
+    phase_angle: 0
+    zero_means_zero: true
+  - platform: ledc
+    id: out_cool_white
+    pin: $cool_white_pin
+    frequency: 4882Hz
+    phase_angle: 180
+    zero_means_zero: true
+
+# ---------------------------------------------------------------------------
+# The light
+#
+# color_interlock is off so the light has a single colour mode. ESPHome fades
+#   through off whenever the colour mode changes, so with interlock on, every
+#   switch between white and colour faded out and back in. With one mode,
+#   all five channels belong to one transition.
+# rgbww_crossfade: every change is a linear crossfade. Each channel's PWM duty
+#   moves in a straight line from where it is to where it is going, all on
+#   the same clock, so every channel starts together, moves at a constant
+#   rate and finishes together. ESPHome's own transition eases in and out
+#   and interpolates before gamma, so outgoing channels drop early and
+#   incoming ones arrive late, which made colours appear to pause partway.
+#   The "Fade Style" select switches back to ESPHome's transition to compare.
+#   The presets and Identify still set either white or colour, never both.
+# constant_brightness: the two whites share the output, so brightness stays
+#   the same across the 2000-7000 K range and both white strings are never
+#   at full power together.
+light:
+  - platform: rgbww_crossfade
+    id: cab_light
+    output_id: cab_light_output
+    name: None   # the entity takes the device's name
+    red: out_red
+    green: out_green
+    blue: out_blue
+    cold_white: out_cool_white
+    warm_white: out_warm_white
+    cold_white_color_temperature: 7000 K
+    warm_white_color_temperature: 2000 K
+    color_interlock: false
+    constant_brightness: true
+    gamma_correct: 2.8
+    default_transition_length: 1s
+    # Restores the last on/off state after a power cut; on if nothing saved.
+    # Use RESTORE_AND_ON instead if the light is switched by a wall switch.
+    restore_mode: RESTORE_DEFAULT_ON
+
+# ---------------------------------------------------------------------------
+# Low-light tuning, adjustable from Home Assistant without reflashing.
+# Both keep their value across reboots.
+select:
+  - platform: template
+    id: fade_style
+    name: "Fade Style"
+    entity_category: config
+    icon: mdi:transition
+    optimistic: true
+    restore_value: true
+    options:
+      - "Linear Crossfade"
+      - "ESPHome Default"
+    initial_option: "Linear Crossfade"
+    on_value:
+      - lambda: "id(cab_light_output).set_fade_mode(i);"
+
+  - platform: template
+    id: pwm_frequency
+    name: "PWM Frequency"
+    entity_category: config
+    icon: mdi:sine-wave
+    optimistic: true
+    restore_value: true
+    options:
+      - "1220 Hz (16-bit)"
+      - "2441 Hz (15-bit)"
+      - "4882 Hz (14-bit)"
+      - "9765 Hz (13-bit)"
+    initial_option: "4882 Hz (14-bit)"
+    on_value:
+      - lambda: |-
+          static const float freqs[] = {1220.0f, 2441.0f, 4882.0f, 9765.0f};
+          const float f = freqs[i < 4 ? i : 0];
+          id(out_red).update_frequency(f);
+          id(out_green).update_frequency(f);
+          id(out_blue).update_frequency(f);
+          id(out_warm_white).update_frequency(f);
+          id(out_cool_white).update_frequency(f);
+
+number:
+  # Length of fades that don't specify their own: the power button toggle
+  # and Home Assistant changes without a transition. The colour button's
+  # presets always fade in preset_fade_ms.
+  - platform: template
+    id: fade_time
+    name: "Fade Time"
+    entity_category: config
+    icon: mdi:timer-outline
+    unit_of_measurement: "s"
+    min_value: 0
+    max_value: 5
+    step: 0.1
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: 1.0
+    on_value:
+      - lambda: "id(cab_light).set_default_transition_length(static_cast<uint32_t>(x * 1000.0f));"
+
+  # Minimum Brightness: what the bottom of the brightness range looks like,
+  # in the same % as the brightness slider. ESPHome's floor (min_power) is a
+  # PWM duty, applied after gamma 2.8, so 1% min_power already looks like
+  # about 19% brightness. This converts through the light's own gamma: set
+  # 5% here and 1% on the slider looks like 5% did before. Everything above
+  # is spread over the remaining range. 0% switches the floor off.
+  # At 4882 Hz one PWM step is 0.006% duty, which is what about 3% brightness
+  # produces; below that the light goes dark without a floor.
+  - platform: template
+    id: min_brightness
+    name: "Minimum Brightness"
+    entity_category: config
+    icon: mdi:brightness-percent
+    unit_of_measurement: "%"
+    min_value: 0
+    max_value: 20
+    step: 0.5
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    on_value:
+      - lambda: |-
+          const float duty = id(cab_light).gamma_correct_lut(x / 100.0f);
+          id(out_red).set_min_power(duty);
+          id(out_green).set_min_power(duty);
+          id(out_blue).set_min_power(duty);
+          id(out_warm_white).set_min_power(duty);
+          id(out_cool_white).set_min_power(duty);
+
+# ---------------------------------------------------------------------------
+# Buttons
+#
+# Every gesture is sent to Home Assistant as an event entity (single_press,
+# double_press, long_press). The local actions run only while that button's
+# "Local ... Button Enabled" switch is on; with it off, the button only sends
+# events and Home Assistant decides what it does. If Home Assistant is not
+# connected, the local actions run anyway, so the light never ends up with
+# dead buttons.
+#
+# Power button:  single   = toggle the light
+#                hold     = dim up or down, reversing direction each hold;
+#                           never below 5% (on from off starts at 5%)
+#                double   = 75% brightness (turns the light on if it's off)
+# Colour button: single   = next preset: 3000 K, 2000 K, 4000 K, 5000 K, then
+#                           the eight colours, with a 0.5 s fade
+#                double   = back to white at 3000 K
+#                hold 3 s = a quick dip to 10%, then a slow sweep round the
+#                           colour wheel; let go on the colour you want
+# Both buttons held 5 s:  restart the ESP32, whatever the switches are set to.
+#
+# A single press waits 300 ms to rule out a double press before it acts.
+# A hold action doesn't start, and stops, while the other button is pressed,
+# so holding both only restarts.
+globals:
+  - id: preset_index
+    type: int
+    initial_value: "-1"
+  - id: dim_up
+    type: bool
+    initial_value: "false"
+  - id: sweep_hue
+    type: float
+    initial_value: "0"
+
+binary_sensor:
+  - platform: gpio
+    id: power_button
+    internal: true
+    pin:
+      number: $power_button_pin
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on_off: 20ms
+    on_multi_click:
+      - timing:
+          - ON for at most 400ms
+          - OFF for at most 300ms
+          - ON for at most 400ms
+          - OFF for at least 200ms
+        then:
+          - if:
+              condition:
+                or:
+                  - switch.is_on: local_power_button
+                  - not:
+                      api.connected:
+              then:
+                - light.turn_on:
+                    id: cab_light
+                    brightness: 75%
+          - event.trigger:
+              id: power_button_event
+              event_type: double_press
+      - timing:
+          - ON for at most 400ms
+          - OFF for at least 300ms
+        then:
+          - if:
+              condition:
+                or:
+                  - switch.is_on: local_power_button
+                  - not:
+                      api.connected:
+              then:
+                - light.toggle: cab_light
+          - event.trigger:
+              id: power_button_event
+              event_type: single_press
+      - timing:
+          - ON for at least 500ms
+        then:
+          - if:
+              condition:
+                binary_sensor.is_off: colour_button
+              then:
+                - event.trigger:
+                    id: power_button_event
+                    event_type: long_press
+                - if:
+                    condition:
+                      or:
+                        - switch.is_on: local_power_button
+                        - not:
+                            api.connected:
+                    then:
+                      - script.execute: hold_dim
+
+  - platform: gpio
+    id: colour_button
+    internal: true
+    pin:
+      number: $colour_button_pin
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on_off: 20ms
+    on_multi_click:
+      - timing:
+          - ON for at most 400ms
+          - OFF for at most 300ms
+          - ON for at most 400ms
+          - OFF for at least 200ms
+        then:
+          - if:
+              condition:
+                or:
+                  - switch.is_on: local_colour_button
+                  - not:
+                      api.connected:
+              then:
+                - script.execute: white_3000
+          - event.trigger:
+              id: colour_button_event
+              event_type: double_press
+      - timing:
+          - ON for at most 400ms
+          - OFF for at least 300ms
+        then:
+          - if:
+              condition:
+                or:
+                  - switch.is_on: local_colour_button
+                  - not:
+                      api.connected:
+              then:
+                - script.execute: next_preset
+          - event.trigger:
+              id: colour_button_event
+              event_type: single_press
+      - timing:
+          - ON for at least 3s
+        then:
+          - if:
+              condition:
+                binary_sensor.is_off: power_button
+              then:
+                - event.trigger:
+                    id: colour_button_event
+                    event_type: long_press
+                - if:
+                    condition:
+                      or:
+                        - switch.is_on: local_colour_button
+                        - not:
+                            api.connected:
+                    then:
+                      - script.execute: colour_sweep
+
+  # Both buttons held together for 5 s: restart. Works with the local
+  # switches off and without Home Assistant.
+  - platform: template
+    id: both_buttons
+    internal: true
+    lambda: "return id(power_button).state && id(colour_button).state;"
+    filters:
+      - delayed_on: 5s
+    on_press:
+      - logger.log: "Both buttons held for 5 s, restarting"
+      - button.press: restart_button
+
+switch:
+  - platform: template
+    id: local_power_button
+    name: "Local Power Button Enabled"
+    entity_category: config
+    icon: mdi:power
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    id: local_colour_button
+    name: "Local Color Button Enabled"
+    entity_category: config
+    icon: mdi:palette
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+event:
+  - platform: template
+    id: power_button_event
+    name: "Power Button"
+    device_class: button
+    event_types:
+      - single_press
+      - double_press
+      - long_press
+  - platform: template
+    id: colour_button_event
+    name: "Color Button"
+    device_class: button
+    event_types:
+      - single_press
+      - double_press
+      - long_press
+
+script:
+  # Colour button presets: four whites, then eight colours.
+  # Edit the RGB values to taste.
+  - id: next_preset
+    then:
+      - lambda: |-
+          struct Preset { float kelvin; float r; float g; float b; };
+          static const Preset presets[] = {
+            {3000, 0, 0, 0},
+            {2000, 0, 0, 0},
+            {4000, 0, 0, 0},
+            {5000, 0, 0, 0},
+            {0, 1.00f, 0.00f, 0.00f},   // red
+            {0, 1.00f, 0.35f, 0.00f},   // orange
+            {0, 1.00f, 0.75f, 0.00f},   // yellow
+            {0, 1.00f, 0.25f, 0.60f},   // pink
+            {0, 0.00f, 1.00f, 0.00f},   // green
+            {0, 0.00f, 0.00f, 1.00f},   // blue
+            {0, 0.00f, 1.00f, 0.80f},   // teal
+            {0, 0.60f, 0.00f, 1.00f},   // purple
+          };
+          const int count = sizeof(presets) / sizeof(presets[0]);
+          id(preset_index) = (id(preset_index) + 1) % count;
+          const Preset &p = presets[id(preset_index)];
+          auto call = id(cab_light).turn_on();
+          if (p.kelvin > 0) {
+            // White: colour temperature on the white channels, RGB faded out
+            call.set_color_temperature(1000000.0f / p.kelvin);   // mireds
+            call.set_color_brightness(0.0f);
+          } else {
+            // Colour: RGB faded in, white channels faded out
+            call.set_rgb(p.r, p.g, p.b);
+            call.set_color_brightness(1.0f);
+            call.set_cold_white(0.0f);
+            call.set_warm_white(0.0f);
+          }
+          call.set_transition_length(${preset_fade_ms});
+          call.perform();
+
+  # Double tap: white at 3000 K. The next single press continues at 2000 K.
+  - id: white_3000
+    then:
+      - lambda: |-
+          id(preset_index) = 0;
+          auto call = id(cab_light).turn_on();
+          call.set_color_temperature(1000000.0f / 3000.0f);   // mireds
+          call.set_color_brightness(0.0f);
+          call.set_transition_length(${preset_fade_ms});
+          call.perform();
+
+  # Colour button held 3 s: a 0.2 s dip of whatever is lit to 10% of its
+  # brightness, to show the sweep has started (skipped if the light is off),
+  # then round the colour wheel from the current colour (red if the light is
+  # white) until the button is let go. One full trip takes
+  # colour_sweep_seconds.
+  - id: colour_sweep
+    mode: restart
+    then:
+      - if:
+          condition:
+            light.is_on: cab_light
+          then:
+            - light.turn_on:
+                id: cab_light
+                brightness: !lambda "return id(cab_light).current_values.get_brightness() * 0.10f;"
+                flash_length: 200ms
+            - delay: 250ms
+      - lambda: |-
+          const auto &v = id(cab_light).current_values;
+          if (v.get_color_brightness() < 0.01f) {
+            id(sweep_hue) = 0.0f;   // white: start at red
+          } else {
+            int hue;
+            float saturation, value;
+            rgb_to_hsv(v.get_red(), v.get_green(), v.get_blue(), hue, saturation, value);
+            id(sweep_hue) = hue;
+          }
+      - while:
+          condition:
+            and:
+              - binary_sensor.is_on: colour_button
+              - binary_sensor.is_off: power_button
+          then:
+            - lambda: |-
+                id(sweep_hue) = fmodf(id(sweep_hue) + 360.0f * 0.05f / ${colour_sweep_seconds}, 360.0f);
+                float r, g, b;
+                hsv_to_rgb(static_cast<int>(id(sweep_hue)), 1.0f, 1.0f, r, g, b);
+                auto call = id(cab_light).turn_on();
+                call.set_rgb(r, g, b);
+                call.set_color_brightness(1.0f);
+                call.set_cold_white(0.0f);
+                call.set_warm_white(0.0f);
+                call.set_transition_length(50);
+                call.perform();
+            - delay: 50ms
+
+  # Identify: alternates white and cyan flashes so it shows whatever state
+  # the light is in. Each flash restores the previous state when it ends.
+  - id: identify
+    mode: single
+    then:
+      - repeat:
+          count: 3
+          then:
+            - light.turn_on:
+                id: cab_light
+                brightness: 100%
+                color_brightness: 0%
+                color_temperature: 4000 K
+                flash_length: 300ms
+            - delay: 450ms
+            - light.turn_on:
+                id: cab_light
+                brightness: 100%
+                color_brightness: 100%
+                red: 0%
+                green: 100%
+                blue: 100%
+                cold_white: 0%
+                warm_white: 0%
+                flash_length: 300ms
+            - delay: 450ms
+
+  # Runs while the power button is held. Each hold reverses direction;
+  # holding while the light is off turns it on at 5% and brightens it.
+  # Local dimming never goes below 5%.
+  - id: hold_dim
+    mode: restart
+    then:
+      - lambda: "id(dim_up) = !id(dim_up);"
+      - if:
+          condition:
+            light.is_off: cab_light
+          then:
+            - lambda: "id(dim_up) = true;"
+            - light.turn_on:
+                id: cab_light
+                brightness: 5%
+                transition_length: 0s
+      - while:
+          condition:
+            and:
+              - binary_sensor.is_on: power_button
+              - binary_sensor.is_off: colour_button
+          then:
+            - light.dim_relative:
+                id: cab_light
+                relative_brightness: !lambda "return id(dim_up) ? 0.02f : -0.02f;"
+                transition_length: 50ms
+                brightness_limits:
+                  min_brightness: 5%
+                  max_brightness: 100%
+            - delay: 50ms
+
+# ---------------------------------------------------------------------------
+# Diagnostics
+sensor:
+  - platform: uptime
+    name: "Uptime"
+    entity_category: diagnostic
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+    entity_category: diagnostic
+
+button:
+  # Flashes white then cyan three times and returns to whatever the light
+  # was doing, so you can find which cabinet this device is in.
+  - platform: template
+    name: "Identify"
+    device_class: identify
+    entity_category: config
+    on_press:
+      - script.execute: identify
+  - platform: restart
+    id: restart_button
+    name: "Restart"
+    entity_category: diagnostic
