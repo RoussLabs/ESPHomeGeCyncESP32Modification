@@ -91,8 +91,7 @@ Kapton tape, and hot air to lift the old module.
 
 None of these are ESP32-C6 strapping pins. D6 and D7 are left free because
 the boot ROM uses them, and D8, D10 and the XIAO's antenna-switch pins
-(GPIO3, GPIO14) are left alone. A printable version with a fit-up checklist
-is in [docs/wiring-and-fit-up.pdf](docs/wiring-and-fit-up.pdf).
+(GPIO3, GPIO14) are left alone.
 
 ### Adafruit Feather ESP32-C6
 
