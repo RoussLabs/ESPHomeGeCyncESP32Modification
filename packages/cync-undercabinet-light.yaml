@@ -27,6 +27,9 @@
 #   D9  / GPIO20   -> U4.10  colour button (reads 0 V when pressed)
 #   U4.8 is not connected on the light. D6, D7, D8 and D10 stay unused.
 #
+# An Adafruit Feather ESP32-C6 also works, with different pins: see
+# examples/undercabinet-light-feather.yaml and docs/wiring-feather.png.
+#
 # Button modes:
 #   Power button
 #     Tap          Toggle the light on or off.
@@ -53,7 +56,7 @@
 # timeouts are disabled so it doesn't restart itself every 15 minutes while
 # it waits; it reconnects on its own when the network comes back.
 #
-# Never plug USB into the XIAO while it is wired to the light's 3.3 V supply:
+# Never plug USB into the board while it is wired to the light's 3.3 V supply:
 # both regulators would drive the same rail. Flash on the bench, then use OTA.
 #
 # Requires ESPHome 2026.9.0 or newer (OTA encryption).
