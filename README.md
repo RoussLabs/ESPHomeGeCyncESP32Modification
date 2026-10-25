@@ -1,5 +1,10 @@
-# ESPHome GE Cync ESP32 Modification
+# ESPHome/ESP32 Conversion for GE Cync Under Cabinet Lights
+**⚠️ Please Note: This is currently a work in progress**
 
+Directed and edited by RoussLabs; grunt work by robots.\
+Nothing here is anything I wouldn't read or reference myself.
+
+## About
 Convert a GE **Cync reveal HD+ smart undercabinet light** to ESPHome by
 replacing its Wi-Fi/Bluetooth module with a Seeed Studio XIAO ESP32-C6 (or an
 Adafruit Feather ESP32-C6). The light keeps its own power supply, LED drivers
