@@ -66,6 +66,11 @@ reads the two buttons, which makes it a clean wire-for-wire swap. The drivers
 accept 0.5-10 kHz PWM. Because current is set in hardware, nothing the
 firmware does can push a channel past its REXT current.
 
+Each button line also has its own 10 kΩ pull-up to 3.3 V and a 100 Ω series
+resistor on the light's board. A press pulls the line to ground on the button
+side of the 100 Ω, so the module sees it low and the current stays limited.
+The firmware leaves the ESP32's internal pull-ups off.
+
 **You need:** a Seeed Studio XIAO ESP32-C6 (recommended; at 21 × 17.5 mm it
 fits where the old module was) or an Adafruit Feather ESP32-C6, thin wire,
 Kapton tape, and hot air to lift the old module.

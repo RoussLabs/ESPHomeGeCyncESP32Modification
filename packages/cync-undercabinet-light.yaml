@@ -25,6 +25,8 @@
 #   D4  / GPIO22   -> U4.7   U6.2/3/4  cool white
 #   D5  / GPIO23   -> U4.9   power button  (reads 0 V when pressed)
 #   D9  / GPIO20   -> U4.10  colour button (reads 0 V when pressed)
+#   Each button line has a 10 kOhm pull-up to 3.3 V and 100 ohm in series on
+#   the light's board, so the ESP32's internal pull-ups are left off.
 #   U4.8 is not connected on the light. D6, D7, D8 and D10 stay unused.
 #
 # An Adafruit Feather ESP32-C6 also works, with different pins: see
@@ -317,8 +319,7 @@ binary_sensor:
     pin:
       number: $power_button_pin
       mode:
-        input: true
-        pullup: true
+        input: true   # the light has its own 10 kOhm pull-up to 3.3 V
       inverted: true
     filters:
       - delayed_on_off: 20ms
@@ -382,8 +383,7 @@ binary_sensor:
     pin:
       number: $colour_button_pin
       mode:
-        input: true
-        pullup: true
+        input: true   # the light has its own 10 kOhm pull-up to 3.3 V
       inverted: true
     filters:
       - delayed_on_off: 20ms
