@@ -319,7 +319,7 @@ binary_sensor:
     pin:
       number: $power_button_pin
       mode:
-        input: true   # the light has its own 10 kOhm pull-up to 3.3 V
+        input: true
       inverted: true
     filters:
       - delayed_on_off: 20ms
@@ -383,7 +383,7 @@ binary_sensor:
     pin:
       number: $colour_button_pin
       mode:
-        input: true   # the light has its own 10 kOhm pull-up to 3.3 V
+        input: true
       inverted: true
     filters:
       - delayed_on_off: 20ms
