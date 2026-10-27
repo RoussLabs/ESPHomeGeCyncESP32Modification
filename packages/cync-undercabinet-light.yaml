@@ -320,6 +320,7 @@ binary_sensor:
       number: $power_button_pin
       mode:
         input: true
+        pullup: true
       inverted: true
     filters:
       - delayed_on_off: 20ms
@@ -384,6 +385,7 @@ binary_sensor:
       number: $colour_button_pin
       mode:
         input: true
+        pullup: true
       inverted: true
     filters:
       - delayed_on_off: 20ms
