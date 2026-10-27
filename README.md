@@ -74,7 +74,7 @@ firmware does can push a channel past its REXT current.
 Each button line also has its own 10 kΩ pull-up to 3.3 V and a 100 Ω series
 resistor on the light's board. A press pulls the line to ground on the button
 side of the 100 Ω, so the module sees it low and the current stays limited.
-The firmware leaves the ESP32's internal pull-ups off.
+The firmware enables the ESP32's internal pull-ups as well.
 
 **You need:** a Seeed Studio XIAO ESP32-C6 (recommended; at 21 × 17.5 mm it
 fits where the old module was) or an Adafruit Feather ESP32-C6, thin wire,
@@ -123,7 +123,7 @@ Feather.
 | MO | GPIO22 | 9 | Power button (0 V when pressed) |
 | MI | GPIO23 | 10 | Colour button (0 V when pressed) |
 
-Use [examples/undercabinet-light-feather.yaml](examples/undercabinet-light-feather.yaml)
+Use [examples/cync-undercabinet-Adafruit-Feather-ESP32C6.yaml](examples/cync-undercabinet-Adafruit-Feather-ESP32C6.yaml)
 for a Feather light. It sets these pins and
 `board: adafruit_feather_esp32c6`, which override the package's XIAO
 defaults; everything else is shared.
@@ -142,10 +142,12 @@ defaults; everything else is shared.
 
 1. **Create the device.** In ESPHome Device Builder, choose New Device and
    give it a name. Device Builder generates a unique API encryption key.
-2. **Replace its YAML** with [examples/undercabinet-light.yaml](examples/undercabinet-light.yaml)
-   (or [the Feather version](examples/undercabinet-light-feather.yaml)),
+2. **Replace its YAML** with [examples/cync-undercabinet-Seeed-XIAO-ESP32C6.yaml](examples/cync-undercabinet-Seeed-XIAO-ESP32C6.yaml)
+   (or [the Feather version](examples/cync-undercabinet-Adafruit-Feather-ESP32C6.yaml)),
    keeping the generated `key:` line. Set `name` and `friendly_name`. Wi-Fi
    comes from `secrets.yaml` (`wifi_ssid`, `wifi_password`).
+   The log level is set here too (`logger: level: INFO`); change it to
+   `DEBUG` while troubleshooting.
 3. **Flash over USB on the bench**, with the board not yet wired to the light.
    Check it joins Wi-Fi and shows up in Home Assistant.
 4. **Remove the JXC8720-18** from U4 with hot air and clean the pads.

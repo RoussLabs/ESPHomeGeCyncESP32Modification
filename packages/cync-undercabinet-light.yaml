@@ -1,8 +1,8 @@
 # Cync reveal HD+ undercabinet light on ESPHome: shared package
 #
 # Everything the light does lives here. Each light gets a small file of its
-# own (see examples/undercabinet-light.yaml) with its name, its API key and
-# Wi-Fi, which pulls this package in.
+# own (see examples/cync-undercabinet-Seeed-XIAO-ESP32C6.yaml) with its
+# name, its API key, Wi-Fi and log level, which pulls this package in.
 #
 # Hardware: GE Cync reveal HD+ smart undercabinet light, models
 # CFIXUNCBR12CRVDMS / CFIXUNCBR18CRVDMS / CFIXUNCBR24CRVDMS (FCC ID
@@ -26,11 +26,12 @@
 #   D5  / GPIO23   -> U4.9   power button  (reads 0 V when pressed)
 #   D9  / GPIO20   -> U4.10  colour button (reads 0 V when pressed)
 #   Each button line has a 10 kOhm pull-up to 3.3 V and 100 ohm in series on
-#   the light's board, so the ESP32's internal pull-ups are left off.
+#   the light's board. The ESP32's internal pull-ups are enabled as well.
 #   U4.8 is not connected on the light. D6, D7, D8 and D10 stay unused.
 #
 # An Adafruit Feather ESP32-C6 also works, with different pins: see
-# examples/undercabinet-light-feather.yaml and docs/wiring-feather.png.
+# examples/cync-undercabinet-Adafruit-Feather-ESP32C6.yaml and
+# docs/wiring-feather.png.
 #
 # Button modes:
 #   Power button
@@ -90,8 +91,7 @@ esp32:
   framework:
     type: esp-idf
 
-logger:
-  level: DEBUG
+logger:   # level is set in each light's own file (INFO by default)
 
 # The API key, OTA block and Wi-Fi credentials are in each light's own file.
 api:
