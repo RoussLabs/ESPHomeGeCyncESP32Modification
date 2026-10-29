@@ -345,6 +345,24 @@ binary_sensor:
           }
           return x;
       - delayed_on_off: 50ms   # ignore anything shorter than 50 ms
+      # When the main loop stalls for longer than the debounce (Wi-Fi driver
+      # work on a weak link, flash writes), an expired debounce timer fires
+      # before the sensor has seen the line go high again, and a sub-ms spike
+      # turns into a 50 ms "press". Re-read the pin: no press unless the line
+      # is still low right now.
+      - lambda: |-
+          constexpr auto pin_number = [](const char *s) {
+            int n = -1;
+            for (; *s; ++s) {
+              if (*s >= '0' && *s <= '9') n = (n < 0 ? 0 : n * 10) + (*s - '0');
+            }
+            return n;
+          };
+          if (x && gpio_get_level((gpio_num_t) pin_number("$power_button_pin")) != 0) {
+            ESP_LOGD("buttons", "Power: debounce expired but the line is high; ignored (main loop stalled?)");
+            return {};
+          }
+          return x;
     # Diagnostics: every edge that gets past the debounce, with its length
     # and the Wi-Fi signal at the time (phantom presses have been seen on
     # weak-signal fixtures).
@@ -433,6 +451,24 @@ binary_sensor:
           }
           return x;
       - delayed_on_off: 50ms   # ignore anything shorter than 50 ms
+      # When the main loop stalls for longer than the debounce (Wi-Fi driver
+      # work on a weak link, flash writes), an expired debounce timer fires
+      # before the sensor has seen the line go high again, and a sub-ms spike
+      # turns into a 50 ms "press". Re-read the pin: no press unless the line
+      # is still low right now.
+      - lambda: |-
+          constexpr auto pin_number = [](const char *s) {
+            int n = -1;
+            for (; *s; ++s) {
+              if (*s >= '0' && *s <= '9') n = (n < 0 ? 0 : n * 10) + (*s - '0');
+            }
+            return n;
+          };
+          if (x && gpio_get_level((gpio_num_t) pin_number("$colour_button_pin")) != 0) {
+            ESP_LOGD("buttons", "Colour: debounce expired but the line is high; ignored (main loop stalled?)");
+            return {};
+          }
+          return x;
     # Diagnostics: every edge that gets past the debounce, with its length
     # and the Wi-Fi signal at the time (phantom presses have been seen on
     # weak-signal fixtures).
