@@ -74,6 +74,9 @@ substitutions:
   colour_button_pin: GPIO20
   power_button_pin: GPIO23
 
+  # Buttons
+  button_debounce_ms: "80"     # a press shorter than this is ignored (test value; was 50)
+
   # Colour button
   preset_fade_ms: "500"        # fade between presets, in ms
   colour_sweep_seconds: "12"   # one full trip round the colour wheel while held
@@ -344,11 +347,11 @@ binary_sensor:
             ESP_LOGD("buttons.raw", "Power line low for %u.%03u ms", us / 1000, us % 1000);
           }
           return x;
-      - delayed_on_off: 50ms   # ignore anything shorter than 50 ms
+      - delayed_on_off: ${button_debounce_ms}ms
       # When the main loop stalls for longer than the debounce (Wi-Fi driver
       # work on a weak link, flash writes), an expired debounce timer fires
       # before the sensor has seen the line go high again, and a sub-ms spike
-      # turns into a 50 ms "press". Re-read the pin: no press unless the line
+      # turns into a debounce-length "press". Re-read the pin: no press unless the line
       # is still low right now.
       - lambda: |-
           constexpr auto pin_number = [](const char *s) {
@@ -450,11 +453,11 @@ binary_sensor:
             ESP_LOGD("buttons.raw", "Colour line low for %u.%03u ms", us / 1000, us % 1000);
           }
           return x;
-      - delayed_on_off: 50ms   # ignore anything shorter than 50 ms
+      - delayed_on_off: ${button_debounce_ms}ms
       # When the main loop stalls for longer than the debounce (Wi-Fi driver
       # work on a weak link, flash writes), an expired debounce timer fires
       # before the sensor has seen the line go high again, and a sub-ms spike
-      # turns into a 50 ms "press". Re-read the pin: no press unless the line
+      # turns into a debounce-length "press". Re-read the pin: no press unless the line
       # is still low right now.
       - lambda: |-
           constexpr auto pin_number = [](const char *s) {
