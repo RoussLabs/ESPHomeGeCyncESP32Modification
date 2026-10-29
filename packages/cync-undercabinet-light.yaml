@@ -81,6 +81,10 @@ substitutions:
 
   # Buttons
   button_debounce_ms: "50"     # a press shorter than this is ignored
+  # "true" logs the length of every raw low on the button lines (DEBUG,
+  # buttons.raw), however short, to see what a fixture's wiring picks up.
+  # Set it in a light's own file while investigating; off for normal use.
+  button_line_log: "false"
 
   # Colour button
   preset_fade_ms: "500"        # fade between presets, in ms
@@ -345,7 +349,7 @@ binary_sensor:
         pullup: true
       inverted: true
     debounce: ${button_debounce_ms}ms
-    log_spikes: true   # DEBUG log of every raw low on the line, however short
+    log_spikes: ${button_line_log}
     # Diagnostics: every edge that gets past the debounce, with its length
     # and the Wi-Fi signal at the time (phantom presses have been seen on
     # weak-signal fixtures).
@@ -423,7 +427,7 @@ binary_sensor:
         pullup: true
       inverted: true
     debounce: ${button_debounce_ms}ms
-    log_spikes: true   # DEBUG log of every raw low on the line, however short
+    log_spikes: ${button_line_log}
     # Diagnostics: every edge that gets past the debounce, with its length
     # and the Wi-Fi signal at the time (phantom presses have been seen on
     # weak-signal fixtures).

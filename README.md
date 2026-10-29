@@ -289,10 +289,12 @@ binary_sensor:
       inverted: true
     debounce: 50ms        # default
     sample_period: 5ms    # default
-    log_spikes: true      # default
+    log_spikes: false     # default; true logs every raw low at DEBUG
 ```
 
-The debounce is `button_debounce_ms` in the package's substitutions.
+In the package these are the substitutions `button_debounce_ms` and
+`button_line_log` (set `button_line_log: "true"` in a light's own file to
+see what its wiring picks up).
 
 **Hardware side:** the spikes shouldn't reach the input at all. A 1 to
 10 nF ceramic capacitor from each button pin to GND, soldered right at the

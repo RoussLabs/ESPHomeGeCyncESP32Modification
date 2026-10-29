@@ -19,6 +19,7 @@ substitutions:
   name: undercabinet-light-01
   friendly_name: "Undercabinet Light 01"
   # components_refresh: "0s"   # uncomment while developing: always build from the current commit
+  # button_line_log: "true"     # uncomment to log every raw low on the button lines (DEBUG)
  
 esphome:
   name: ${name}
