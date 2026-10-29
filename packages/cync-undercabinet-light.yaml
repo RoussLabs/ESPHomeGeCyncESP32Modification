@@ -74,6 +74,11 @@ substitutions:
   colour_button_pin: GPIO20
   power_button_pin: GPIO23
 
+  # How often Device Builder re-downloads this repo's components (the
+  # rgbww_crossfade and cync_button code). Set to "0s" in a light's own file
+  # while developing, so every install builds from the current commit.
+  components_refresh: "1d"
+
   # Buttons
   button_debounce_ms: "50"     # a press shorter than this is ignored
 
@@ -89,7 +94,7 @@ substitutions:
 external_components:
   - source: github://RoussLabs/ESPHomeGeCyncESP32Modification@main
     components: [rgbww_crossfade, cync_button]
-    refresh: 1d
+    refresh: ${components_refresh}
 
 esp32:
   board: seeed_xiao_esp32c6

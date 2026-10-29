@@ -18,6 +18,7 @@
 substitutions:
   name: undercabinet-light-01
   friendly_name: "Undercabinet Light 01"
+  # components_refresh: "0s"   # uncomment while developing: always build from the current commit
  
 esphome:
   name: ${name}
