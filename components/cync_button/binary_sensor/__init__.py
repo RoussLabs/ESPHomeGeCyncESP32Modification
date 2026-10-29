@@ -26,9 +26,10 @@ CONF_LOG_SPIKES = "log_spikes"
 def _validate(config):
     debounce = config[CONF_DEBOUNCE].total_milliseconds
     period = config[CONF_SAMPLE_PERIOD].total_milliseconds
-    if period <= 0 or period > debounce:
+    if period <= 0 or period * 3 > debounce:
         raise cv.Invalid(
-            f"{CONF_SAMPLE_PERIOD} must be between 1ms and {CONF_DEBOUNCE} ({debounce}ms)"
+            f"{CONF_SAMPLE_PERIOD} ({period}ms) must be at most a third of "
+            f"{CONF_DEBOUNCE} ({debounce}ms), so a decision takes at least three samples"
         )
     return config
 

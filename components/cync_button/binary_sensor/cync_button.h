@@ -54,7 +54,6 @@ class CyncButton final : public binary_sensor::BinarySensor, public Component {
   bool last_sample_{false};
   // Sampler -> main loop
   volatile bool debounced_{false};
-  volatile bool changed_{false};
 
   // Edge interrupt -> main loop
   volatile bool raw_pressed_{false};

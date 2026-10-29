@@ -10,7 +10,9 @@ void CyncButton::setup() {
   this->pin_->setup();
   this->isr_pin_ = this->pin_->to_isr();
 
-  this->samples_needed_ = std::max<uint32_t>(1, this->debounce_ms_ / this->sample_ms_);
+  // Consecutive identical samples needed, counting the first differing one,
+  // so the pin has been stable for at least debounce_ms_ when we commit.
+  this->samples_needed_ = (this->debounce_ms_ + this->sample_ms_ - 1) / this->sample_ms_ + 1;
   this->last_sample_ = this->pin_->digital_read();
   this->stable_count_ = this->samples_needed_;
   this->debounced_ = this->last_sample_;
@@ -48,8 +50,7 @@ void CyncButton::sample_cb(void *arg) {
   }
   if (self->stable_count_ >= self->samples_needed_ && sample != self->debounced_) {
     self->debounced_ = sample;
-    self->changed_ = true;
-    self->enable_loop_soon_any_context();
+    self->enable_loop_soon_any_context();  // wake the main loop to publish it
   }
 }
 
@@ -69,10 +70,11 @@ void IRAM_ATTR CyncButton::edge_isr(CyncButton *self) {
 }
 
 void CyncButton::loop() {
-  if (this->changed_) {
-    this->changed_ = false;
-    this->publish_state(this->debounced_);
-  }
+  // Publish from a snapshot compared with what was last published; no flag
+  // to hand between the timer task and the loop, so nothing can be skipped.
+  const bool debounced = this->debounced_;
+  if (!this->has_state() || debounced != this->state)
+    this->publish_state(debounced);
   const uint32_t count = this->raw_count_;
   if (count != this->raw_logged_) {
     const uint32_t us = this->raw_last_us_;

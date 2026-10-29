@@ -360,9 +360,9 @@ binary_sensor:
                    (unsigned) (millis() - id(power_pressed_at)));
     on_multi_click:
       - timing:
-          - ON for 40ms to 400ms
+          - ON for at most 400ms
           - OFF for at most 300ms
-          - ON for 40ms to 400ms
+          - ON for at most 400ms
           - OFF for at least 200ms
         then:
           - if:
@@ -379,7 +379,7 @@ binary_sensor:
               id: power_button_event
               event_type: double_press
       - timing:
-          - ON for 40ms to 400ms
+          - ON for at most 400ms
           - OFF for at least 300ms
         then:
           - if:
@@ -438,9 +438,9 @@ binary_sensor:
                    (unsigned) (millis() - id(colour_pressed_at)));
     on_multi_click:
       - timing:
-          - ON for 40ms to 400ms
+          - ON for at most 400ms
           - OFF for at most 300ms
-          - ON for 40ms to 400ms
+          - ON for at most 400ms
           - OFF for at least 200ms
         then:
           - if:
@@ -455,7 +455,7 @@ binary_sensor:
               id: colour_button_event
               event_type: double_press
       - timing:
-          - ON for 40ms to 400ms
+          - ON for at most 400ms
           - OFF for at least 300ms
         then:
           - if:
