@@ -99,6 +99,10 @@ api:
 
 wifi:
   reboot_timeout: 0s   # default 15min: reboots if Wi-Fi isn't connected
+  on_connect:
+    - logger.log: { level: INFO, tag: wifi, format: "Wi-Fi connected" }
+  on_disconnect:
+    - logger.log: { level: INFO, tag: wifi, format: "Wi-Fi disconnected" }
   # No fallback hotspot or captive portal: an open hotspot on every light
   # during a router outage would let anyone nearby enter new Wi-Fi details.
 
@@ -311,6 +315,12 @@ globals:
   - id: sweep_hue
     type: float
     initial_value: "0"
+  - id: power_pressed_at
+    type: uint32_t
+    initial_value: "0"
+  - id: colour_pressed_at
+    type: uint32_t
+    initial_value: "0"
 
 binary_sensor:
   - platform: gpio
@@ -323,12 +333,24 @@ binary_sensor:
         pullup: true
       inverted: true
     filters:
-      - delayed_on_off: 20ms
+      - delayed_on_off: 50ms   # ignore anything shorter than 50 ms
+    # Diagnostics: every edge that gets past the debounce, with its length
+    # and the Wi-Fi signal at the time (phantom presses have been seen on
+    # weak-signal fixtures).
+    on_press:
+      - lambda: |-
+          id(power_pressed_at) = millis();
+          ESP_LOGI("buttons", "Power button down (RSSI %d dBm)",
+                   wifi::global_wifi_component->wifi_rssi());
+    on_release:
+      - lambda: |-
+          ESP_LOGI("buttons", "Power button up after %u ms",
+                   (unsigned) (millis() - id(power_pressed_at)));
     on_multi_click:
       - timing:
-          - ON for at most 400ms
+          - ON for 40ms to 400ms
           - OFF for at most 300ms
-          - ON for at most 400ms
+          - ON for 40ms to 400ms
           - OFF for at least 200ms
         then:
           - if:
@@ -345,7 +367,7 @@ binary_sensor:
               id: power_button_event
               event_type: double_press
       - timing:
-          - ON for at most 400ms
+          - ON for 40ms to 400ms
           - OFF for at least 300ms
         then:
           - if:
@@ -388,12 +410,24 @@ binary_sensor:
         pullup: true
       inverted: true
     filters:
-      - delayed_on_off: 20ms
+      - delayed_on_off: 50ms   # ignore anything shorter than 50 ms
+    # Diagnostics: every edge that gets past the debounce, with its length
+    # and the Wi-Fi signal at the time (phantom presses have been seen on
+    # weak-signal fixtures).
+    on_press:
+      - lambda: |-
+          id(colour_pressed_at) = millis();
+          ESP_LOGI("buttons", "Colour button down (RSSI %d dBm)",
+                   wifi::global_wifi_component->wifi_rssi());
+    on_release:
+      - lambda: |-
+          ESP_LOGI("buttons", "Colour button up after %u ms",
+                   (unsigned) (millis() - id(colour_pressed_at)));
     on_multi_click:
       - timing:
-          - ON for at most 400ms
+          - ON for 40ms to 400ms
           - OFF for at most 300ms
-          - ON for at most 400ms
+          - ON for 40ms to 400ms
           - OFF for at least 200ms
         then:
           - if:
@@ -408,7 +442,7 @@ binary_sensor:
               id: colour_button_event
               event_type: double_press
       - timing:
-          - ON for at most 400ms
+          - ON for 40ms to 400ms
           - OFF for at least 300ms
         then:
           - if:
