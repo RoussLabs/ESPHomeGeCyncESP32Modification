@@ -75,7 +75,7 @@ substitutions:
   power_button_pin: GPIO23
 
   # Buttons
-  button_debounce_ms: "80"     # a press shorter than this is ignored (test value; was 50)
+  button_debounce_ms: "50"     # a press shorter than this is ignored
 
   # Colour button
   preset_fade_ms: "500"        # fade between presets, in ms
@@ -83,9 +83,12 @@ substitutions:
 
 # rgbww_crossfade: ESPHome's rgbww light with a linear crossfade transition.
 # See components/rgbww_crossfade/rgbww_crossfade.h.
+# cync_button: debounced button input sampled by a high-priority timer, so a
+# busy or sleeping main loop can't turn a spike into a press.
+# See components/cync_button/binary_sensor/cync_button.h.
 external_components:
   - source: github://RoussLabs/ESPHomeGeCyncESP32Modification@main
-    components: [rgbww_crossfade]
+    components: [rgbww_crossfade, cync_button]
     refresh: 1d
 
 esp32:
@@ -326,8 +329,9 @@ globals:
     initial_value: "0"
 
 binary_sensor:
-  - platform: gpio
+  - platform: cync_button
     id: power_button
+    name: Power button
     internal: true
     pin:
       number: $power_button_pin
@@ -335,37 +339,8 @@ binary_sensor:
         input: true
         pullup: true
       inverted: true
-    filters:
-      # Diagnostics: log every raw low on the line, however short, before the
-      # debounce decides whether it counts. Shows what the debounce is hiding.
-      - lambda: |-
-          static uint32_t down_at = 0;
-          if (x) {
-            down_at = micros();
-          } else {
-            uint32_t us = micros() - down_at;
-            ESP_LOGD("buttons.raw", "Power line low for %u.%03u ms", us / 1000, us % 1000);
-          }
-          return x;
-      - delayed_on_off: ${button_debounce_ms}ms
-      # When the main loop stalls for longer than the debounce (Wi-Fi driver
-      # work on a weak link, flash writes), an expired debounce timer fires
-      # before the sensor has seen the line go high again, and a sub-ms spike
-      # turns into a debounce-length "press". Re-read the pin: no press unless the line
-      # is still low right now.
-      - lambda: |-
-          constexpr auto pin_number = [](const char *s) {
-            int n = -1;
-            for (; *s; ++s) {
-              if (*s >= '0' && *s <= '9') n = (n < 0 ? 0 : n * 10) + (*s - '0');
-            }
-            return n;
-          };
-          if (x && gpio_get_level((gpio_num_t) pin_number("$power_button_pin")) != 0) {
-            ESP_LOGD("buttons", "Power: debounce expired but the line is high; ignored (main loop stalled?)");
-            return {};
-          }
-          return x;
+    debounce: ${button_debounce_ms}ms
+    log_spikes: true   # DEBUG log of every raw low on the line, however short
     # Diagnostics: every edge that gets past the debounce, with its length
     # and the Wi-Fi signal at the time (phantom presses have been seen on
     # weak-signal fixtures).
@@ -432,8 +407,9 @@ binary_sensor:
                     then:
                       - script.execute: hold_dim
 
-  - platform: gpio
+  - platform: cync_button
     id: colour_button
+    name: Colour button
     internal: true
     pin:
       number: $colour_button_pin
@@ -441,37 +417,8 @@ binary_sensor:
         input: true
         pullup: true
       inverted: true
-    filters:
-      # Diagnostics: log every raw low on the line, however short, before the
-      # debounce decides whether it counts. Shows what the debounce is hiding.
-      - lambda: |-
-          static uint32_t down_at = 0;
-          if (x) {
-            down_at = micros();
-          } else {
-            uint32_t us = micros() - down_at;
-            ESP_LOGD("buttons.raw", "Colour line low for %u.%03u ms", us / 1000, us % 1000);
-          }
-          return x;
-      - delayed_on_off: ${button_debounce_ms}ms
-      # When the main loop stalls for longer than the debounce (Wi-Fi driver
-      # work on a weak link, flash writes), an expired debounce timer fires
-      # before the sensor has seen the line go high again, and a sub-ms spike
-      # turns into a debounce-length "press". Re-read the pin: no press unless the line
-      # is still low right now.
-      - lambda: |-
-          constexpr auto pin_number = [](const char *s) {
-            int n = -1;
-            for (; *s; ++s) {
-              if (*s >= '0' && *s <= '9') n = (n < 0 ? 0 : n * 10) + (*s - '0');
-            }
-            return n;
-          };
-          if (x && gpio_get_level((gpio_num_t) pin_number("$colour_button_pin")) != 0) {
-            ESP_LOGD("buttons", "Colour: debounce expired but the line is high; ignored (main loop stalled?)");
-            return {};
-          }
-          return x;
+    debounce: ${button_debounce_ms}ms
+    log_spikes: true   # DEBUG log of every raw low on the line, however short
     # Diagnostics: every edge that gets past the debounce, with its length
     # and the Wi-Fi signal at the time (phantom presses have been seen on
     # weak-signal fixtures).

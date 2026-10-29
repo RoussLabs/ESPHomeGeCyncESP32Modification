@@ -259,6 +259,49 @@ light:
     constant_brightness: true
 ```
 
+## The `cync_button` component
+
+The two buttons use a small custom binary-sensor platform instead of
+ESPHome's `gpio` sensor with a `delayed_on_off` filter.
+
+On fixtures with a weak Wi-Fi link, the ESP32-C6's own transmissions at full
+power couple into the button wires and produce sub-millisecond spikes on the
+lines, dozens an hour. ESPHome's filter decides in the main loop: the line
+goes low, a timer starts, and the release is only noticed when the loop next
+runs. When that is after the timer has expired, a 0.2 ms spike becomes a
+"press" of exactly the debounce length (52 ms presses with a 50 ms
+debounce, 82 ms with 80 ms). The light toggled on its own.
+
+`cync_button` samples the pin from a high-priority esp_timer every 5 ms and
+commits a press or release once the pin has read the same for `debounce`.
+A spike that lands on one sample is undone by the next, and the decision
+never waits for the main loop. The raw edges are still counted by an
+interrupt and logged at DEBUG (`buttons.raw`), so you can see what a
+fixture's wiring is picking up:
+
+```yaml
+binary_sensor:
+  - platform: cync_button
+    id: power_button
+    pin:
+      number: GPIO23
+      mode: { input: true, pullup: true }
+      inverted: true
+    debounce: 50ms        # default
+    sample_period: 5ms    # default
+    log_spikes: true      # default
+```
+
+The debounce is `button_debounce_ms` in the package's substitutions.
+
+**Hardware side:** the spikes shouldn't reach the input at all. A 1 to
+10 nF ceramic capacitor from each button pin to GND, soldered right at the
+board, shunts the RF before the input rectifies it. Treat it as part of the
+build on any fixture whose log shows `buttons.raw` lines; a fixture that
+shows none doesn't need it. A better Wi-Fi signal (the XIAO has a U.FL
+connector for an external antenna) reduces the spikes too, but the buttons
+must not depend on it.
+
 ## Notes
 
 - **Matter:** the stock light supports Matter, which already gives local
