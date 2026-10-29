@@ -333,6 +333,17 @@ binary_sensor:
         pullup: true
       inverted: true
     filters:
+      # Diagnostics: log every raw low on the line, however short, before the
+      # debounce decides whether it counts. Shows what the debounce is hiding.
+      - lambda: |-
+          static uint32_t down_at = 0;
+          if (x) {
+            down_at = micros();
+          } else {
+            uint32_t us = micros() - down_at;
+            ESP_LOGD("buttons.raw", "Power line low for %u.%03u ms", us / 1000, us % 1000);
+          }
+          return x;
       - delayed_on_off: 50ms   # ignore anything shorter than 50 ms
     # Diagnostics: every edge that gets past the debounce, with its length
     # and the Wi-Fi signal at the time (phantom presses have been seen on
@@ -410,6 +421,17 @@ binary_sensor:
         pullup: true
       inverted: true
     filters:
+      # Diagnostics: log every raw low on the line, however short, before the
+      # debounce decides whether it counts. Shows what the debounce is hiding.
+      - lambda: |-
+          static uint32_t down_at = 0;
+          if (x) {
+            down_at = micros();
+          } else {
+            uint32_t us = micros() - down_at;
+            ESP_LOGD("buttons.raw", "Colour line low for %u.%03u ms", us / 1000, us % 1000);
+          }
+          return x;
       - delayed_on_off: 50ms   # ignore anything shorter than 50 ms
     # Diagnostics: every edge that gets past the debounce, with its length
     # and the Wi-Fi signal at the time (phantom presses have been seen on
