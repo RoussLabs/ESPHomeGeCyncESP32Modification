@@ -85,6 +85,9 @@ substitutions:
   # buttons.raw), however short, to see what a fixture's wiring picks up.
   # Set it in a light's own file while investigating; off for normal use.
   button_line_log: "false"
+  # "true" logs each press and release (INFO, buttons) with the press length
+  # and the Wi-Fi signal at the time. Off for normal use.
+  button_press_log: "false"
 
   # Colour button
   preset_fade_ms: "500"        # fade between presets, in ms
@@ -350,18 +353,21 @@ binary_sensor:
       inverted: true
     debounce: ${button_debounce_ms}ms
     log_spikes: ${button_line_log}
-    # Diagnostics: every edge that gets past the debounce, with its length
-    # and the Wi-Fi signal at the time (phantom presses have been seen on
-    # weak-signal fixtures).
+    # Diagnostics (button_press_log): each press and release with its length
+    # and the Wi-Fi signal at the time.
     on_press:
       - lambda: |-
-          id(power_pressed_at) = millis();
-          ESP_LOGI("buttons", "Power button down (RSSI %d dBm)",
-                   wifi::global_wifi_component->wifi_rssi());
+          if (${button_press_log}) {
+            id(power_pressed_at) = millis();
+            ESP_LOGI("buttons", "Power button down (RSSI %d dBm)",
+                     wifi::global_wifi_component->wifi_rssi());
+          }
     on_release:
       - lambda: |-
-          ESP_LOGI("buttons", "Power button up after %u ms",
-                   (unsigned) (millis() - id(power_pressed_at)));
+          if (${button_press_log}) {
+            ESP_LOGI("buttons", "Power button up after %u ms",
+                     (unsigned) (millis() - id(power_pressed_at)));
+          }
     on_multi_click:
       - timing:
           - ON for at most 400ms
@@ -428,18 +434,21 @@ binary_sensor:
       inverted: true
     debounce: ${button_debounce_ms}ms
     log_spikes: ${button_line_log}
-    # Diagnostics: every edge that gets past the debounce, with its length
-    # and the Wi-Fi signal at the time (phantom presses have been seen on
-    # weak-signal fixtures).
+    # Diagnostics (button_press_log): each press and release with its length
+    # and the Wi-Fi signal at the time.
     on_press:
       - lambda: |-
-          id(colour_pressed_at) = millis();
-          ESP_LOGI("buttons", "Colour button down (RSSI %d dBm)",
-                   wifi::global_wifi_component->wifi_rssi());
+          if (${button_press_log}) {
+            id(colour_pressed_at) = millis();
+            ESP_LOGI("buttons", "Colour button down (RSSI %d dBm)",
+                     wifi::global_wifi_component->wifi_rssi());
+          }
     on_release:
       - lambda: |-
-          ESP_LOGI("buttons", "Colour button up after %u ms",
-                   (unsigned) (millis() - id(colour_pressed_at)));
+          if (${button_press_log}) {
+            ESP_LOGI("buttons", "Colour button up after %u ms",
+                     (unsigned) (millis() - id(colour_pressed_at)));
+          }
     on_multi_click:
       - timing:
           - ON for at most 400ms

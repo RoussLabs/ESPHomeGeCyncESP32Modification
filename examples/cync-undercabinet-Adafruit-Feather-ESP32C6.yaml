@@ -25,6 +25,7 @@ substitutions:
   friendly_name: "Undercabinet Light 01"
   # components_refresh: "0s"   # uncomment while developing: always build from the current commit
   # button_line_log: "true"     # uncomment to log every raw low on the button lines (DEBUG)
+  # button_press_log: "true"    # uncomment to log each press/release with its length (INFO)
   # Feather ESP32-C6 pins
   red_pin: GPIO1            # A0
   green_pin: GPIO6          # A2

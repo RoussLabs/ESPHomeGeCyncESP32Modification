@@ -103,6 +103,24 @@ None of these are ESP32-C6 strapping pins. D6 and D7 are left free because
 the boot ROM uses them, and D8, D10 and the XIAO's antenna-switch pins
 (GPIO3, GPIO14) are left alone.
 
+### XIAO on the "ESPHome GE Cync Mod" adapter PCB
+
+An adapter PCB that carries the XIAO and plugs into the U4 pads is in
+testing; details and files will follow. Its routing uses different pins, so
+a light built on it takes
+[examples/cync-undercabinet-Seeed-XIAO-ESP32C6-PCB.yaml](examples/cync-undercabinet-Seeed-XIAO-ESP32C6-PCB.yaml)
+instead of the flying-lead example.
+
+| U4 pad | XIAO pin | GPIO | Goes to |
+|---|---|---|---|
+| 3 | D7 | GPIO17 | U5 DIM, red |
+| 4 | D5 | GPIO23 | U5 DIM, green |
+| 5 | D4 | GPIO22 | U5 DIM, blue |
+| 6 | D3 | GPIO21 | U3 DIM (all three), warm white |
+| 7 | D2 | GPIO2 | U6 DIM (all three), cool white |
+| 9 | D10 | GPIO18 | Power button (0 V when pressed) |
+| 10 | D9 | GPIO20 | Colour button (0 V when pressed) |
+
 ### Adafruit Feather ESP32-C6
 
 ![Feather wiring diagram](docs/wiring-feather.png)
@@ -143,7 +161,8 @@ defaults; everything else is shared.
 1. **Create the device.** In ESPHome Device Builder, choose New Device and
    give it a name. Device Builder generates a unique API encryption key.
 2. **Replace its YAML** with [examples/cync-undercabinet-Seeed-XIAO-ESP32C6.yaml](examples/cync-undercabinet-Seeed-XIAO-ESP32C6.yaml)
-   (or [the Feather version](examples/cync-undercabinet-Adafruit-Feather-ESP32C6.yaml)),
+   (or the [adapter-PCB](examples/cync-undercabinet-Seeed-XIAO-ESP32C6-PCB.yaml) or
+   [Feather](examples/cync-undercabinet-Adafruit-Feather-ESP32C6.yaml) version),
    keeping the generated `key:` line. Set `name` and `friendly_name`. Wi-Fi
    comes from `secrets.yaml` (`wifi_ssid`, `wifi_password`).
    The log level is set here too (`logger: level: INFO`); change it to
@@ -292,9 +311,11 @@ binary_sensor:
     log_spikes: false     # default; true logs every raw low at DEBUG
 ```
 
-In the package these are the substitutions `button_debounce_ms` and
-`button_line_log` (set `button_line_log: "true"` in a light's own file to
-see what its wiring picks up).
+In the package these are the substitutions `button_debounce_ms`,
+`button_line_log` (every raw low on the lines, DEBUG) and `button_press_log`
+(each press and release with its length and the Wi-Fi signal, INFO). Both
+logs are off by default; set either to `"true"` in a light's own file while
+investigating.
 
 **Hardware side:** the spikes shouldn't reach the input at all. A 1 to
 10 nF ceramic capacitor from each button pin to GND, soldered right at the

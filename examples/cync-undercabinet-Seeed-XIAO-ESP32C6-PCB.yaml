@@ -1,0 +1,67 @@
+# Cync reveal HD+ undercabinet light (CFIXUNCBR12/18/24CRVDMS) on ESPHome
+# One Cync undercabinet light with the XIAO ESP32-C6 on the "ESPHome GE Cync
+# Mod" adapter PCB instead of flying leads. Make one of these per light. Same
+# as cync-undercabinet-Seeed-XIAO-ESP32C6.yaml except for the pins, which
+# follow the PCB's routing; values here override the package.
+#
+# In ESPHome Device Builder: New Device, give it a name, then edit it and
+# replace everything with this file, KEEPING the api encryption key that
+# Device Builder generated. Every light needs its own key; OTA encryption
+# reuses it. Wi-Fi comes from /config/esphome/secrets.yaml (wifi_ssid,
+# wifi_password).
+#
+# Name the lights by number (undercabinet-light-01, -02, ...) and label each
+# XIAO to match. Put the location (e.g. "Kitchen Left") in Home Assistant's
+# device name and area, which can change any time. Changing `name` here later
+# changes the device's network hostname.
+#
+# PCB routing (U4 pad -> XIAO pin): 3 -> D7, 4 -> D5, 5 -> D4, 6 -> D3,
+# 7 -> D2, 9 -> D10, 10 -> D9. Button modes and settings: see
+# packages/cync-undercabinet-light.yaml and the README.
+
+substitutions:
+  name: undercabinet-light-01
+  friendly_name: "Undercabinet Light 01"
+  # "ESPHome GE Cync Mod" PCB pins
+  red_pin: GPIO17           # D7  <- U4.3
+  green_pin: GPIO23         # D5  <- U4.4
+  blue_pin: GPIO22          # D4  <- U4.5
+  warm_white_pin: GPIO21    # D3  <- U4.6
+  cool_white_pin: GPIO2     # D2  <- U4.7
+  power_button_pin: GPIO18  # D10 <- U4.9
+  colour_button_pin: GPIO20 # D9  <- U4.10
+  # components_refresh: "0s"   # uncomment while developing: always build from the current commit
+  # button_line_log: "true"     # uncomment to log every raw low on the button lines (DEBUG)
+  # button_press_log: "true"    # uncomment to log each press/release with its length (INFO)
+ 
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+api:
+  encryption:
+    key: 
+  reboot_timeout: 0s   
+ 
+ota:
+  - platform: esphome
+    encryption:   # no key: OTA reuses the api encryption key (ESPHome 2026.9+)
+ 
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  reboot_timeout: 0s   # default 15min: reboots if Wi-Fi isn't connected
+  # No fallback hotspot or captive portal: an open hotspot on every light
+  # during a router outage would let anyone nearby enter new Wi-Fi details.
+
+logger:
+  level: INFO
+
+
+packages:
+  cync_undercabinet:
+    url: https://github.com/RoussLabs/ESPHomeGeCyncESP32Modification
+    ref: main
+    refresh: 1d
+    files:
+      - packages/cync-undercabinet-light.yaml
