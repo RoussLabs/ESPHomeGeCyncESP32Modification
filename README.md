@@ -113,13 +113,13 @@ instead of the flying-lead example.
 
 | U4 pad | XIAO pin | GPIO | Goes to |
 |---|---|---|---|
-| 3 | D7 | GPIO17 | U5 DIM, red |
-| 4 | D5 | GPIO23 | U5 DIM, green |
-| 5 | D4 | GPIO22 | U5 DIM, blue |
-| 6 | D3 | GPIO21 | U3 DIM (all three), warm white |
-| 7 | D2 | GPIO2 | U6 DIM (all three), cool white |
-| 9 | D10 | GPIO18 | Power button (0 V when pressed) |
-| 10 | D9 | GPIO20 | Colour button (0 V when pressed) |
+| 3 | D5 | GPIO23 | U5 DIM, red |
+| 4 | D4 | GPIO22 | U5 DIM, green |
+| 5 | D3 | GPIO21 | U5 DIM, blue |
+| 6 | D2 | GPIO2 | U3 DIM (all three), warm white |
+| 7 | D1 | GPIO1 | U6 DIM (all three), cool white |
+| 9 | D9 | GPIO20 | Power button (0 V when pressed) |
+| 10 | D8 | GPIO19 | Colour button (0 V when pressed) |
 
 ### Adafruit Feather ESP32-C6
 
