@@ -217,8 +217,8 @@ after a package change.
 | Both | Hold 5 s | Restart the ESP32, whatever the settings |
 
 Every gesture is also sent to Home Assistant as an event entity (`Power
-Button`, `Color Button`) with `single_press`, `double_press` and
-`long_press`. Turn off **Local Power Button Enabled** or **Local Color Button
+Button`, `Color Button`) with `single_press`, `double_press`, `long_press`
+and `long_release` (when a held button is let go). Turn off **Local Power Button Enabled** or **Local Color Button
 Enabled** and that button only sends events, so Home Assistant decides what
 it does. If Home Assistant isn't connected, the buttons act locally anyway,
 so the light never ends up with dead buttons.

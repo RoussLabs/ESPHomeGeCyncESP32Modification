@@ -303,7 +303,7 @@ number:
 # Buttons
 #
 # Every gesture is sent to Home Assistant as an event entity (single_press,
-# double_press, long_press). The local actions run only while that button's
+# double_press, long_press, and long_release when a held button is let go). The local actions run only while that button's
 # "Local ... Button Enabled" switch is on; with it off, the button only sends
 # events and Home Assistant decides what it does. If Home Assistant is not
 # connected, the local actions run anyway, so the light never ends up with
@@ -339,6 +339,12 @@ globals:
   - id: colour_pressed_at
     type: uint32_t
     initial_value: "0"
+  - id: power_holding        # a long press is in progress (for long_release)
+    type: bool
+    initial_value: "false"
+  - id: colour_holding
+    type: bool
+    initial_value: "false"
 
 binary_sensor:
   - platform: cync_button
@@ -368,6 +374,17 @@ binary_sensor:
             ESP_LOGI("buttons", "Power button up after %u ms",
                      (unsigned) (millis() - id(power_pressed_at)));
           }
+      # End of a hold, so Home Assistant knows when to stop dimming or sweeping.
+      - if:
+          condition:
+            lambda: 'return id(power_holding);'
+          then:
+            - globals.set:
+                id: power_holding
+                value: "false"
+            - event.trigger:
+                id: power_button_event
+                event_type: long_release
     on_multi_click:
       - timing:
           - ON for at most 400ms
@@ -413,6 +430,9 @@ binary_sensor:
                 - event.trigger:
                     id: power_button_event
                     event_type: long_press
+                - globals.set:
+                    id: power_holding
+                    value: "true"
                 - if:
                     condition:
                       or:
@@ -449,6 +469,17 @@ binary_sensor:
             ESP_LOGI("buttons", "Colour button up after %u ms",
                      (unsigned) (millis() - id(colour_pressed_at)));
           }
+      # End of a hold, so Home Assistant knows when to stop dimming or sweeping.
+      - if:
+          condition:
+            lambda: 'return id(colour_holding);'
+          then:
+            - globals.set:
+                id: colour_holding
+                value: "false"
+            - event.trigger:
+                id: colour_button_event
+                event_type: long_release
     on_multi_click:
       - timing:
           - ON for at most 400ms
@@ -492,6 +523,9 @@ binary_sensor:
                 - event.trigger:
                     id: colour_button_event
                     event_type: long_press
+                - globals.set:
+                    id: colour_holding
+                    value: "true"
                 - if:
                     condition:
                       or:
@@ -538,6 +572,7 @@ event:
       - single_press
       - double_press
       - long_press
+      - long_release
   - platform: template
     id: colour_button_event
     name: "Color Button"
@@ -546,6 +581,7 @@ event:
       - single_press
       - double_press
       - long_press
+      - long_release
 
 script:
   # Colour button presets: four whites, then eight colours.
