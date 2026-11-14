@@ -217,23 +217,11 @@ after a package change.
 | Both | Hold 5 s | Restart the ESP32, whatever the settings |
 
 Every gesture is also sent to Home Assistant as an event entity (`Power
-Button`, `Color Button`) with `single_press`, `double_press`, `long_press`
-and `long_release` (sent when a held button is let go, so Home Assistant
-knows when dimming or the colour sweep ended). Turn off **Local Power Button Enabled** or **Local Color Button
+Button`, `Color Button`) with `single_press`, `double_press` and
+`long_press`. Turn off **Local Power Button Enabled** or **Local Color Button
 Enabled** and that button only sends events, so Home Assistant decides what
 it does. If Home Assistant isn't connected, the buttons act locally anyway,
 so the light never ends up with dead buttons.
-
-## Buttons controlling the whole group
-
-Each light's buttons act on that light. To have any light's buttons control
-all of them while keeping individual control from Home Assistant, use
-[homeassistant/under_cabinet_group.yaml](homeassistant/under_cabinet_group.yaml):
-an automation that copies a light's state to the other members of a light
-group only when the change came from that light's own buttons (within two
-seconds of a button event, or while a button is held). Changes made from
-Home Assistant to one light or to the group are not copied. The lights still
-work on their own, individually, when Home Assistant is down.
 
 ## In Home Assistant
 
