@@ -234,7 +234,7 @@ so the light never ends up with dead buttons.
 | Fade Time | Number | Default fade length (power button and HA changes without a transition) |
 | Fade Style | Select | Linear Crossfade (default) or ESPHome Default, to compare |
 | Minimum Brightness | Number | Floor for the brightness slider, in brightness % |
-| PWM Frequency | Select | 1220 / 2441 / 4882 / 9765 Hz; 4882 Hz by default |
+| PWM Frequency | Select | 1220 Hz to 39 kHz; 4882 Hz by default. Options above 9765 Hz are beyond the LED drivers' rated range and are there to move the switching out of the audible band |
 | Uptime, WiFi Signal, Restart | Diagnostic | |
 
 **Minimum Brightness:** at 4882 Hz one PWM step equals about 3% brightness,

@@ -133,6 +133,13 @@ wifi:
 # chosen after testing on the first light: no visible flicker, even with fast
 # movement. The "PWM Frequency" select below changes it at runtime.
 #
+# Below 100% the LED current switches at this frequency, and the power
+# supply and the board can be heard singing at it; 4882 Hz is near where
+# hearing is most sensitive. The select therefore also offers 15 to 39 kHz.
+# Those are above the drivers' rated 0.5-10 kHz DIM range and have fewer
+# steps (12-bit to 19.5 kHz, 11-bit above), so the lowest brightness levels
+# need checking, and "Minimum Brightness" may need raising.
+#
 # phase_angle spreads the switching edges so the channels don't all turn on
 # at the same instant on the 40 V supply.
 #
@@ -238,11 +245,20 @@ select:
       - "2441 Hz (15-bit)"
       - "4882 Hz (14-bit)"
       - "9765 Hz (13-bit)"
+      # Above the SM15133EH's rated 10 kHz DIM range; for getting the
+      # switching out of the audible band. Check low brightness on each.
+      # New options are only ever appended: the saved setting is an index.
+      - "15000 Hz (12-bit)"
+      - "19531 Hz (12-bit)"
+      - "25000 Hz (11-bit)"
+      - "39062 Hz (11-bit)"
     initial_option: "4882 Hz (14-bit)"
     on_value:
       - lambda: |-
-          static const float freqs[] = {1220.0f, 2441.0f, 4882.0f, 9765.0f};
-          const float f = freqs[i < 4 ? i : 0];
+          static const float freqs[] = {1220.0f, 2441.0f, 4882.0f, 9765.0f,
+                                        15000.0f, 19531.0f, 25000.0f, 39062.0f};
+          const size_t count = sizeof(freqs) / sizeof(freqs[0]);
+          const float f = freqs[i < count ? i : 2];
           id(out_red).update_frequency(f);
           id(out_green).update_frequency(f);
           id(out_blue).update_frequency(f);
